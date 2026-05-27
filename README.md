@@ -393,13 +393,6 @@ Interactive docs: **http://localhost:8000/docs**
 
 ---
 
-## Documentation
-
-- [`docs/ENTIDADES.md`](docs/ENTIDADES.md) — legacy domain reference (migration guide)
-- [`docs/ETAPA1.md`](docs/ETAPA1.md) — early infrastructure notes
-
----
-
 ## Contributing
 
 This project is primarily a portfolio / product refactor. Issues and PRs are welcome once the public repository is published.
@@ -413,7 +406,7 @@ This project is primarily a portfolio / product refactor. Issues and PRs are wel
 
 ## License
 
-MIT — see [LICENSE](LICENSE) file in the repository root (add `LICENSE` if not present yet).
+MIT [LICENSE](LICENSE).
 
 ---
 

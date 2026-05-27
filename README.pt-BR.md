@@ -371,13 +371,6 @@ Documentação interativa: **http://localhost:8000/docs**
 
 ---
 
-## Documentação complementar
-
-- [`docs/ENTIDADES.md`](docs/ENTIDADES.md) — mapa do domínio legado (referência de migração)
-- [`docs/ETAPA1.md`](docs/ETAPA1.md) — notas da infraestrutura inicial
-
----
-
 ## Contribuindo
 
 Projeto de portfólio / produto em refatoração. Após publicação no GitHub:
@@ -391,7 +384,7 @@ Projeto de portfólio / produto em refatoração. Após publicação no GitHub:
 
 ## Licença
 
-MIT — arquivo `LICENSE` na raiz do repositório.
+MIT — [LICENSE](LICENSE).
 
 ---
 
