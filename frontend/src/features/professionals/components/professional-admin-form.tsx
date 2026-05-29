@@ -22,6 +22,8 @@ export function toAdminValues(pro?: Professional): ProfessionalAdminValues {
   return {
     name: pro?.name ?? "",
     is_active: pro?.is_active ?? true,
+    participation_percentage: pro?.participation_percentage ?? 0,
+    active_for_distribution: pro?.active_for_distribution ?? false,
   };
 }
 
@@ -64,6 +66,39 @@ export function ProfessionalAdminForm({ defaultValues: pro, onSubmit, isLoading 
             </FormItem>
           )}
         />
+        <div className="rounded-xl border p-4 space-y-4">
+          <p className="text-sm font-medium">Participação financeira</p>
+          <FormField
+            control={form.control}
+            name="participation_percentage"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Percentual de participação (%)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" min="0" max="100" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="active_for_distribution"
+            render={({ field }) => (
+              <FormItem className="flex items-center gap-3 space-y-0">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={field.onChange}
+                    className="h-4 w-4 rounded accent-primary"
+                  />
+                </FormControl>
+                <FormLabel className="!mt-0 font-normal">Ativo para distribuição</FormLabel>
+              </FormItem>
+            )}
+          />
+        </div>
         <Button type="submit" disabled={isLoading}>
           {isLoading ? "Salvando..." : "Salvar"}
         </Button>

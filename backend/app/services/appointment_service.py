@@ -46,6 +46,7 @@ SLOT_STEP_MINUTES = 15
 
 class AppointmentService:
     def __init__(self, session: AsyncSession) -> None:
+        self._session = session
         self._repo = AppointmentRepository(session)
 
     async def list_appointments(
@@ -148,7 +149,19 @@ class AppointmentService:
                 next_status = self._coerce_appointment_status(next_status)
                 self._validate_status_transition(current_status, next_status)
                 payload["status"] = next_status
+                becoming_completed = (
+                    next_status == AppointmentStatus.completed
+                    and current_status != AppointmentStatus.completed
+                )
+            else:
+                becoming_completed = False
+        else:
+            becoming_completed = False
         updated = await self._repo.update(appointment, **payload)
+        if becoming_completed:
+            from app.services.financial_service import FinancialService
+
+            await FinancialService(self._session).record_service_revenue(updated)
         return self._to_response(updated)
 
     async def cancel(

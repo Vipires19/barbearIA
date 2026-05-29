@@ -1,27 +1,30 @@
-import { CircleDollarSign } from "lucide-react";
+"use client";
 
 import { RequireRole } from "@/components/auth/require-role";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/shared/page-header";
+import { FinancialAdminDashboard } from "@/features/financial/components/financial-admin-dashboard";
+import { ProfessionalWalletView } from "@/features/financial/components/professional-wallet";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
-export default function FinancialPlaceholderPage() {
+export function FinancialPageContent() {
+  const { data: user } = useCurrentUser();
+
+  if (user?.role === "barber") {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Carteira" description="Acompanhe sua participação financeira e vales." />
+        <ProfessionalWalletView />
+      </div>
+    );
+  }
+
+  return <FinancialAdminDashboard />;
+}
+
+export default function FinancialPage() {
   return (
-    <RequireRole allow={["admin"]}>
-    <div className="mx-auto max-w-lg space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CircleDollarSign className="h-5 w-5 text-muted-foreground" aria-hidden />
-            Financeiro
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Módulo financeiro em breve. Esta área integrará faturamento, comissões e relatórios
-            operacionais.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <RequireRole allow={["admin", "barber"]}>
+      <FinancialPageContent />
     </RequireRole>
   );
 }

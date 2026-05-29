@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { MobileCards } from "@/components/shared/mobile-cards";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
+import { ParticipationSummaryBanner } from "@/features/financial/components/participation-summary-banner";
 import { LoadingSkeleton } from "@/features/professionals/components/loading-skeleton";
 import { ProfessionalMobileCard } from "@/features/professionals/components/professional-mobile-card";
 import { ProfessionalTable } from "@/features/professionals/components/professional-table";
@@ -89,6 +90,10 @@ export function ProfessionalsAdminList() {
           </Button>
         }
       />
+
+      <div className="mb-6">
+        <ParticipationSummaryBanner />
+      </div>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchInput

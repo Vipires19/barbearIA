@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 
+import { ParticipationSummaryBanner } from "@/features/financial/components/participation-summary-banner";
 import { ProfessionalAvailabilityEditor } from "@/features/availability/components/professional-availability-editor";
 import { ProfessionalAdminForm } from "@/features/professionals/components/professional-admin-form";
 
@@ -120,6 +121,8 @@ export function ProfessionalEditForm({ professionalId }: ProfessionalEditFormPro
     <>
 
       <div className="mx-auto max-w-2xl space-y-6">
+
+        <ParticipationSummaryBanner />
 
         <Card>
 

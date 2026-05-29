@@ -40,6 +40,10 @@ export type Professional = {
 
   is_active: boolean;
 
+  participation_percentage: number;
+
+  active_for_distribution: boolean;
+
   is_publicly_visible: boolean;
 
   user_id?: string | null;
@@ -119,6 +123,10 @@ export type ProfessionalAdminUpdatePayload = {
   name?: string;
 
   is_active?: boolean;
+
+  participation_percentage?: number;
+
+  active_for_distribution?: boolean;
 
 };
 

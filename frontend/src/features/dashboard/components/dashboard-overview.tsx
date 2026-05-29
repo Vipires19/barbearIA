@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, CheckCircle2, Clock, Smartphone, type LucideIcon } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, Package, ShoppingCart, Smartphone, TrendingUp, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { AppointmentCard } from "@/features/appointments/components/appointment-card";
 import { useAppointmentsList } from "@/features/appointments/hooks/use-appointments";
 import { toISODate } from "@/features/appointments/utils/format";
+import { formatCurrency } from "@/features/financial/utils/format";
+import { LowStockWidget } from "@/features/inventory/components/low-stock-widget";
+import { useInventoryDashboard } from "@/features/inventory/hooks/use-inventory";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 export function DashboardOverview() {
@@ -26,6 +29,8 @@ export function DashboardOverview() {
     page_size: 5,
     status: "scheduled",
   });
+  const inventoryDashboard = useInventoryDashboard();
+  const showInventory = user?.role === "admin" || user?.role === "barber";
 
   return (
     <div className="space-y-8">
@@ -107,6 +112,57 @@ export function DashboardOverview() {
         />
       </div>
 
+      {showInventory ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <MetricCard
+              title="Produtos"
+              value={inventoryDashboard.data?.products_count ?? 0}
+              description="Produtos cadastrados"
+              icon={Package}
+              loading={inventoryDashboard.isLoading}
+            />
+            <MetricCard
+              title="Estoque baixo"
+              value={inventoryDashboard.data?.low_stock_count ?? 0}
+              description="Abaixo do mínimo"
+              icon={Package}
+              loading={inventoryDashboard.isLoading}
+              highlight={!!inventoryDashboard.data?.low_stock_count}
+            />
+            <MetricCard
+              title="Vendas"
+              value={inventoryDashboard.data?.period_sales_count ?? 0}
+              description="Vendas no período"
+              icon={ShoppingCart}
+              loading={inventoryDashboard.isLoading}
+            />
+            <CurrencyMetricCard
+              title="Receita vendas"
+              value={inventoryDashboard.data?.product_sales_revenue ?? 0}
+              description="Produtos no período"
+              icon={TrendingUp}
+              loading={inventoryDashboard.isLoading}
+            />
+            <CurrencyMetricCard
+              title="Receita serviços"
+              value={inventoryDashboard.data?.service_revenue ?? 0}
+              description="Serviços no período"
+              icon={TrendingUp}
+              loading={inventoryDashboard.isLoading}
+            />
+            <CurrencyMetricCard
+              title="Receita total"
+              value={inventoryDashboard.data?.total_revenue ?? 0}
+              description="Vendas + serviços"
+              icon={TrendingUp}
+              loading={inventoryDashboard.isLoading}
+            />
+          </div>
+          <LowStockWidget />
+        </>
+      ) : null}
+
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="border-border/60 bg-card/80">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
@@ -175,11 +231,15 @@ function MetricCard({
   value,
   description,
   icon: Icon,
+  loading,
+  highlight,
 }: {
   title: string;
   value: number;
   description: string;
   icon: LucideIcon;
+  loading?: boolean;
+  highlight?: boolean;
 }) {
   return (
     <Card className="border-border/60 bg-card/80">
@@ -188,7 +248,42 @@ function MetricCard({
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-bold">{value}</p>
+        {loading ? (
+          <Skeleton className="h-8 w-16" />
+        ) : (
+          <p className={`text-2xl font-bold tabular-nums ${highlight ? "text-amber-400" : ""}`}>{value}</p>
+        )}
+        <CardDescription>{description}</CardDescription>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CurrencyMetricCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  loading,
+}: {
+  title: string;
+  value: number;
+  description: string;
+  icon: LucideIcon;
+  loading?: boolean;
+}) {
+  return (
+    <Card className="border-border/60 bg-card/80">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-8 w-24" />
+        ) : (
+          <p className="text-2xl font-bold tabular-nums text-emerald-400">{formatCurrency(value)}</p>
+        )}
         <CardDescription>{description}</CardDescription>
       </CardContent>
     </Card>

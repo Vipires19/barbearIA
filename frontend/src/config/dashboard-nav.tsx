@@ -3,6 +3,7 @@ import {
   CalendarDays,
   CircleDollarSign,
   LayoutDashboard,
+  Package,
   Scissors,
   Settings,
   UserCircle,
@@ -65,8 +66,14 @@ export function getDashboardNavItems(role?: UserRole): SidebarItem[] {
     {
       id: "dashboard-financial",
       href: "/dashboard/financial",
-      label: "Financeiro",
+      label: role === "barber" ? "Carteira" : "Financeiro",
       icon: <CircleDollarSign className="h-4 w-4" aria-hidden />,
+    },
+    {
+      id: "dashboard-inventory",
+      href: "/dashboard/inventory",
+      label: "Estoque",
+      icon: <Package className="h-4 w-4" aria-hidden />,
     },
     {
       id: "dashboard-settings",
@@ -78,8 +85,7 @@ export function getDashboardNavItems(role?: UserRole): SidebarItem[] {
 
   if (role === "barber") {
     return items.filter(
-      (item) =>
-        !["dashboard-services", "dashboard-professionals", "dashboard-financial"].includes(item.id),
+      (item) => !["dashboard-services", "dashboard-professionals"].includes(item.id),
     );
   }
 

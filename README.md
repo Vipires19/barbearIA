@@ -1,6 +1,6 @@
 # Barber SaaS Platform
 
-**AI-ready barber shop operations platform** with public booking, role-based dashboard, and a dynamic scheduling engine — built as a modern refactor from a legacy Django stack.
+**AI-ready barber shop operations platform** with public booking, role-based dashboard, dynamic scheduling, financial management, inventory, and sales — built as a modern refactor from a legacy Django stack.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -18,18 +18,23 @@
 This is **not** a generic barbershop CRUD demo. It is an **operational SaaS foundation** designed for:
 
 - **Public self-service booking** (no account required)
-- **Internal operations** (admin + barber roles)
+- **Internal operations** (`admin` + `barber` roles)
 - **Interval-based scheduling** (not fixed slots)
 - **Multi-service appointments** (session model)
+- **Financial management** (periods, cash reserve, professional participation)
+- **Inventory and sales** integrated with finance
 - **Future AI layer** (WhatsApp agent, automation) without coupling business logic to the UI
 
 | Layer | Status |
 |-------|--------|
-| Core API + PostgreSQL + migrations | ✅ Implemented |
-| JWT auth + RBAC (`admin`, `barber`) | ✅ Implemented |
+| Core API + PostgreSQL + migrations (001–014) | ✅ Implemented |
+| JWT auth + RBAC | ✅ Implemented |
 | Public booking + “My appointments” | ✅ Implemented |
-| Dynamic scheduling base (`AppointmentItem`, `ProfessionalAvailability`) | ✅ Implemented (evolving) |
-| Financial / inventory / AI agents | 📋 Planned |
+| Scheduling (`AppointmentItem`, availability, blocks) | ✅ Implemented |
+| Appointment completion → automatic revenue | ✅ Implemented |
+| Financial module (periods, expenses, advances, close) | ✅ Implemented |
+| Inventory, sales, product categories | ✅ Implemented |
+| AI agents / WhatsApp | 📋 Planned |
 
 **Version:** API `0.2.0` · **Active development**
 
@@ -37,31 +42,36 @@ This is **not** a generic barbershop CRUD demo. It is an **operational SaaS foun
 
 ## Preview
 
-Screenshots will be added before the public GitHub release. Placeholders below mark the main product surfaces.
+Screenshots will be added before the public GitHub release.
 
 | Surface | Route | Description |
 |---------|-------|-------------|
-| **Public home** | `/` | Landing, services showcase, professionals, WhatsApp CTA |
-| **Booking flow** | `/booking` | Service → professional → date → time → confirmation |
-| **My appointments** | `/my-appointments` | Lookup by phone, cancel / reschedule |
-| **Dashboard** | `/dashboard` | Role-based operational overview |
-| **Calendar** | `/dashboard/calendar` | Appointment calendar view |
-| **Settings → Profile** | `/dashboard/settings/profile` | Professional public profile (photo, bio, services) |
+| **Public home** | `/` | Landing, services, professionals, WhatsApp CTA |
+| **Booking** | `/booking` | Service(s) → professional → date → time → confirm |
+| **My appointments** | `/my-appointments` | Phone lookup, cancel / reschedule |
+| **Dashboard** | `/dashboard` | Operational overview (today, low stock, KPIs) |
+| **Appointments** | `/dashboard/appointments` | Manage sessions and status |
+| **Calendar** | `/dashboard/calendar` | Calendar view |
+| **Financial / Wallet** | `/dashboard/financial` | Admin: financial panel · Barber: personal wallet |
+| **Inventory** | `/dashboard/inventory` | Products, movements, sales, categories |
+| **Services** | `/dashboard/services` | Service CRUD (admin) |
+| **Professionals** | `/dashboard/professionals` | CRUD, participation %, availability (admin) |
+| **Settings → Profile** | `/dashboard/settings/profile` | Professional public profile |
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  [ Public Home ]     [ Booking ]     [ My Appointments ]    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  FastAPI API  ◄──►  PostgreSQL  │  Redis (infra ready)    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Dashboard (admin / barber)  ·  Calendar  ·  Professionals  │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  [ Home ]     [ Booking ]     [ My appointments ]                         │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  FastAPI (/api/v1)  ◄──►  PostgreSQL  │  Redis (infra ready)           │
+└──────────────────────────────────────────────────────────────────────────┘
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          ▼                         ▼                         ▼
+    Appointments              Financial                 Inventory / Sales
+    (session + items)     (periods, audit)           (products, categories)
 ```
 
 ---
@@ -73,13 +83,13 @@ Screenshots will be added before the public GitHub release. Placeholders below m
 | Feature | Status |
 |---------|--------|
 | Public landing page | ✅ |
-| Service catalog (public) | ✅ |
+| Service catalog | ✅ |
 | Professionals showcase (visibility-controlled) | ✅ |
 | Step-by-step booking flow | ✅ |
-| Available slots API (duration-aware, 15 min granularity) | ✅ |
-| “My appointments” by phone (list / cancel / reschedule) | ✅ |
-| WhatsApp deep link CTA | ✅ (manual link; WAHA automation planned) |
-| Multi-service selection in one booking (UI) | 📋 Planned (API supports `service_ids`) |
+| Multi-service booking (`service_ids`) | ✅ |
+| Available slots API (15 min granularity) | ✅ |
+| “My appointments” by phone | ✅ |
+| WhatsApp deep link CTA | ✅ (manual; WAHA planned) |
 
 ### Operational dashboard
 
@@ -87,26 +97,56 @@ Screenshots will be added before the public GitHub release. Placeholders below m
 |---------|--------|
 | JWT login (access + refresh) | ✅ |
 | Admin seed on first startup | ✅ |
-| Role-based navigation (`admin` / `barber`) | ✅ |
+| Role-based navigation | ✅ |
 | Services CRUD | ✅ |
-| Professionals onboarding (name, login, active flag) | ✅ |
-| Professional profile (bio, avatar, specialties, services, visibility) | ✅ |
-| Professional ↔ User linking (admin can operate as barber) | ✅ |
-| Appointments management | ✅ |
-| Calendar view | ✅ |
-| `ProfessionalAvailability` (weekly rules) | ✅ API + model |
-| Availability management UI | 📋 In progress |
-| Financial module | 📋 Placeholder only |
+| Professionals onboarding + participation % (100% validation) | ✅ |
+| Professional profile + User linking | ✅ |
+| Appointments (status, completion, cancel, reschedule) | ✅ |
+| Completion → `FinancialEntry(SERVICE_REVENUE)` | ✅ |
+| Calendar / operational agenda | ✅ |
+| `ProfessionalAvailability` + management UI | ✅ |
+| `ProfessionalScheduleBlock` | ✅ |
+| Financial module (dashboard, expenses, advances, period close) | ✅ |
+| Professional wallet (`/financial/my-wallet`) | ✅ |
+| Inventory, movements, sales, categories | ✅ |
+
+### Financial
+
+| Feature | Status |
+|---------|--------|
+| Open/closed `FinancialPeriod` | ✅ |
+| `FinancialEntry` with `amount_snapshot` | ✅ |
+| Auto revenue on appointment completion | ✅ |
+| Auto revenue on product sale (`PRODUCT_SALE`) | ✅ |
+| Operational `Expense` | ✅ |
+| Professional `Advance` (vale) | ✅ |
+| Configurable cash `reserve_percentage` | ✅ |
+| `ReserveHistory` | ✅ |
+| `ProfitDistribution` by participation | ✅ |
+| Period close with totals snapshot | ✅ |
+| `FinancialAuditLog` | ✅ |
+
+### Inventory & sales
+
+| Feature | Status |
+|---------|--------|
+| Product CRUD + minimum stock | ✅ |
+| Movements `IN` / `OUT` / `ADJUSTMENT` | ✅ |
+| Negative stock blocked | ✅ |
+| Movement history | ✅ |
+| Operational sale with auto stock deduction | ✅ |
+| Sale cancellation with restock + financial reversal | ✅ |
+| Product categories (CRUD, soft delete, filter) | ✅ |
+| Block delete when products linked | ✅ |
+| Category aggregations (analytics-ready) | ✅ |
 
 ### AI-ready architecture
 
-The codebase is structured so an **AI / automation layer** can call the same REST API and domain services without rewriting scheduling rules.
-
 | Capability | Status |
 |------------|--------|
-| Stateless API suitable for agents | ✅ |
-| Clear domain boundaries (services / repositories) | ✅ |
-| Public appointment endpoints (phone-scoped) | ✅ |
+| Stateless API for agents | ✅ |
+| Clear domain boundaries | ✅ |
+| Public phone-scoped endpoints | ✅ |
 | LangGraph operational agent | 📋 Planned |
 | WAHA WhatsApp integration | 📋 Planned |
 | Automated reminders / rescheduling | 📋 Planned |
@@ -117,29 +157,25 @@ The codebase is structured so an **AI / automation layer** can call the same RES
 
 ### Backend
 
-- **FastAPI** — async REST API, OpenAPI docs
-- **SQLAlchemy 2** — ORM (async)
-- **PostgreSQL 16** — primary datastore
-- **Redis 7** — connected at startup (caching/queues ready)
-- **Alembic** — schema migrations (001–007)
+- **FastAPI** — async REST, OpenAPI
+- **SQLAlchemy 2** — async ORM (`postgresql.ENUM` with `values_callable` for domain enums)
+- **PostgreSQL 16**
+- **Redis 7** — connected at startup
+- **Alembic** — migrations **001–014**
 
 ### Frontend
 
-- **Next.js** (App Router)
-- **React** + **TypeScript**
-- **TanStack React Query** — server state
-- **Tailwind CSS** + **shadcn/ui** — UI system
-- **React Hook Form** + **Zod** — forms and validation
+- **Next.js** (App Router) · **React** · **TypeScript**
+- **TanStack React Query** · **Tailwind** + **shadcn/ui**
+- **React Hook Form** + **Zod**
 
 ### Infrastructure
 
-- **Docker** + **Docker Compose** — `postgres`, `redis`, `api`, `web`
+- **Docker Compose** — `postgres`, `redis`, `api`, `web`
 
-### Future AI layer (planned)
+### Future AI layer
 
-- **LangGraph** — operational agent workflows
-- **OpenAI** — LLM provider
-- **WAHA** — WhatsApp HTTP API gateway
+- **LangGraph** · **OpenAI** · **WAHA**
 
 ---
 
@@ -154,57 +190,149 @@ The codebase is structured so an **AI / automation layer** can call the same RES
                           │                                    │
                           └──────────────┬─────────────────────┘
                                          ▼
-                              FastAPI (v1 REST)
+                              FastAPI (/api/v1)
                                          │
-                    ┌────────────────────┼────────────────────┐
-                    ▼                    ▼                    ▼
-              Services            Professionals           Appointments
-                    │                    │                    │
-                    └──────── professional_services ────────┘
-                                         │
+        ┌────────────────────────────────┼────────────────────────────────┐
+        ▼                                ▼                                ▼
+   Appointments                     Financial                      Inventory / Sales
+        │                                │                                │
+        └────────────────────────────────┴────────────────────────────────┘
                                          ▼
                                    PostgreSQL
 ```
 
 ### RBAC
 
-| Role | Responsibility |
-|------|----------------|
-| **User** (`admin` / `barber`) | Authentication only — login, password, role |
-| **Professional** | Public profile, services performed, availability, calendar |
-| **Guest** | Booking and appointment lookup via phone (no User record) |
+| Entity | Role |
+|--------|------|
+| **User** (`admin` / `barber`) | Authentication |
+| **Professional** | Public profile, services, availability, calendar, participation % |
+| **Guest** | Booking and lookup by phone (no User) |
 
-- **Admin:** full operational control (services, professionals, all appointments).
-- **Barber:** own appointments + profile; restricted navigation.
+- **Admin:** full control including finance close and inventory.
+- **Barber:** own calendar, profile, and wallet; restricted global CRUD.
 
-### Scheduling engine (core concept)
+### System domains
 
-> **An appointment is not a single service.**  
-> **An appointment is a session.** Services inside the session are **appointment items**.
+| Domain | Responsibility | Main entities |
+|--------|----------------|---------------|
+| **Identity** | JWT, roles | `User` |
+| **Catalog** | Services | `Service`, `professional_services` |
+| **Professionals** | Profile, availability, participation | `Professional`, `ProfessionalAvailability`, `ProfessionalScheduleBlock` |
+| **Scheduling** | Sessions and slots | `Appointment`, `AppointmentItem` |
+| **Financial** | Periods, revenue, expenses, reserve, distribution | `FinancialPeriod`, `FinancialEntry`, `Expense`, `Advance`, `ProfitDistribution`, `FinancialSettings`, `ReserveHistory` |
+| **Inventory** | Products and movements | `Product`, `ProductCategory`, `InventoryMovement` |
+| **Sales** | Product sales | `Sale`, `SaleItem` |
+| **Audit** | Sensitive event trail | `FinancialAuditLog` |
 
-| Entity | Meaning |
-|--------|---------|
-| **Appointment** | Client session: `start_time`, `end_time`, `total_duration_minutes`, `total_price` |
-| **AppointmentItem** | One service in the session: `service_id`, `duration_minutes`, `price`, `position` |
-| **ProfessionalAvailability** | Weekly availability rule: `weekday`, `start_time`, `end_time`, `active` |
+### Core models
 
-**Slot algorithm (current):**
+#### Scheduling
 
-1. Client selects service(s) → total duration is summed.
-2. System loads professionals who can perform those services (M2M).
-3. Weekly availability windows are applied per weekday.
-4. Existing appointments block **real time intervals** (overlap detection).
-5. Candidate start times advance in **15-minute** steps.
+| Model | Notes |
+|-------|-------|
+| **Appointment** | Session: client, professional, date/time, totals, `status` |
+| **AppointmentItem** | Service in session: duration, price, order |
+| **ProfessionalAvailability** | Weekly rule |
+| **ProfessionalScheduleBlock** | Point-in-time block |
 
-Designed for future: breaks, vacations, exceptions, combos, and AI-suggested gaps.
+Statuses: `scheduled`, `confirmed`, `completed`, `cancelled`, `no_show`.
 
-### Layering (backend)
+#### Financial
+
+| Model | Notes |
+|-------|-------|
+| **FinancialPeriod** | `OPEN` / `CLOSED`, snapshot totals on close |
+| **FinancialEntry** | `SERVICE_REVENUE`, `PRODUCT_SALE`, `MANUAL_REVENUE`; `amount_snapshot` |
+| **Expense** · **Advance** · **ProfitDistribution** | Period-scoped operations |
+| **FinancialSettings** | `reserve_percentage` |
+| **ReserveHistory** | Reserve movements |
+| **FinancialAuditLog** | `action`, `entity_type`, `metadata` (JSONB) |
+
+#### Inventory & sales
+
+| Model | Notes |
+|-------|-------|
+| **ProductCategory** | Soft delete via `is_active` |
+| **Product** | `category_id`, stock, minimum |
+| **InventoryMovement** | `IN`, `OUT`, `ADJUSTMENT` |
+| **Sale** / **SaleItem** | `COMPLETED` / `CANCELLED` |
+
+### Scheduling engine
+
+> **An appointment is a session.** Services are **appointment items**.
+
+**Slot algorithm:** sum durations → filter professionals (M2M) → weekly availability → subtract blocks and overlapping appointments → 15-minute step.
+
+### Operational flow
+
+```mermaid
+flowchart LR
+  subgraph Public
+    A[Booking] --> B[Appointment + Items]
+  end
+  subgraph Ops
+    B --> C{Status}
+    C -->|completed| D[FinancialEntry SERVICE_REVENUE]
+  end
+```
+
+### Financial flow
+
+```mermaid
+flowchart TB
+  subgraph Revenue
+    AP[Appointment completed] --> FE1[SERVICE_REVENUE]
+    SL[Sale created] --> FE2[PRODUCT_SALE]
+  end
+  subgraph Period
+    FE1 & FE2 --> FP[FinancialPeriod OPEN]
+    EX[Expense / Advance] --> FP
+    FP --> CL[Close period]
+    CL --> RS[ReserveHistory]
+    CL --> PD[ProfitDistribution]
+  end
+```
+
+- Participation percentages for active professionals must sum to **100%** at period close.
+- Cash reserve is retained before profit distribution.
+
+### Inventory flow
+
+Stock changes via `InventoryMovement`; negative stock is blocked; low-stock alerts on dashboard.
+
+### Sales flow
+
+Sale creates `OUT` movements + `FinancialEntry(PRODUCT_SALE)`; cancellation restocks and reverses finance + audit events.
+
+### Financial audit events
+
+`EXPENSE_CREATED`, `ADVANCE_CREATED`, `SETTINGS_UPDATED`, `RESERVE_UPDATED`, `PERIOD_CLOSED`, `PRODUCT_CREATED`, `PRODUCT_UPDATED`, `STOCK_UPDATED`, `SALE_CREATED`, `SALE_CANCELLED`, `CATEGORY_CREATED`, `CATEGORY_UPDATED`, `CATEGORY_DEACTIVATED`.
+
+Entity types: `EXPENSE`, `ADVANCE`, `FINANCIAL_SETTINGS`, `FINANCIAL_PERIOD`, `RESERVE_HISTORY`, `PRODUCT`, `SALE`, `INVENTORY_MOVEMENT`, `PRODUCT_CATEGORY`.
+
+### Database structure
+
+Alembic head: **014**
+
+| Rev | Theme |
+|-----|-------|
+| 001–007 | Core booking |
+| 008 | Schedule blocks |
+| 009–011 | Financial module |
+| 012 | Inventory & sales |
+| 013 | Product categories |
+| 014 | Audit enum consolidation |
+
+Main tables: `users`, `services`, `professionals`, `appointments`, `appointment_items`, `financial_*`, `product_categories`, `products`, `inventory_movements`, `sales`, `sale_items`.
+
+### Backend layering
 
 ```text
 api/v1  →  services  →  repositories  →  models
-              ↑
-         schemas (Pydantic)
 ```
+
+Routers: `health`, `auth`, `users`, `appointments`, `public/appointments`, `services`, `professionals`, `financial`, `inventory` (+ `/categories`).
 
 ---
 
@@ -212,195 +340,109 @@ api/v1  →  services  →  repositories  →  models
 
 ```text
 barber_refac/
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/          # REST routers (auth, services, professionals, appointments, public)
-│   │   ├── core/            # config, deps, RBAC, exceptions
-│   │   ├── db/              # SQLAlchemy session, Redis
-│   │   ├── models/          # domain models
-│   │   ├── repositories/    # data access
-│   │   ├── schemas/         # request/response DTOs
-│   │   ├── services/        # business logic
-│   │   └── utils/           # security, phone, uploads
-│   ├── alembic/             # migrations
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── app/             # Next.js routes (public + dashboard + auth)
-│   │   ├── features/        # domain modules (appointments, professionals, …)
-│   │   ├── components/      # shared UI
-│   │   └── config/          # nav, branding
-│   ├── Dockerfile
-│   └── package.json
-├── docs/                    # entity reference, stage notes
-├── docker-compose.yml       # full stack
-├── .env.example
-├── README.md                # English (this file)
-└── README.pt-BR.md          # Portuguese
+├── backend/app/{api,core,models,repositories,schemas,services}
+├── backend/alembic/versions/     # 001 … 014
+├── frontend/src/features/
+│   ├── appointments/ · availability/ · agenda/
+│   ├── financial/ · inventory/
+│   └── professionals/ · services/ · dashboard/
+├── docs/
+├── docker-compose.yml
+└── README.md · README.pt-BR.md
 ```
 
 ---
 
 ## Running locally
 
-### Prerequisites
-
-- Docker & Docker Compose **or**
-- Python 3.12+, Node.js 20+, PostgreSQL 16, Redis 7
-
-### Quick start (Docker — recommended)
+### Quick start (Docker)
 
 ```bash
 cd barber_refac
 cp .env.example .env
-# Edit JWT secrets and admin password before any shared deployment
-
 docker compose up --build
 ```
 
 | Service | URL |
 |---------|-----|
-| Web (dev) | http://localhost:3001 (default `WEB_PORT`) |
+| Web (dev) | http://localhost:3001 |
 | API | http://localhost:8000 |
 | OpenAPI | http://localhost:8000/docs |
-| PostgreSQL | `localhost:5432` |
-| Redis | `localhost:6379` |
 
-Migrations run on API container startup via Alembic. Current head: **007** (booking refactor).
+Migrations run on API startup. Current head: **014**.
 
-Default admin (seeded if none exists): see `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`.
+> Frontend API calls use `/api/v1/...` (e.g. `/api/v1/financial`, `/api/v1/inventory`).
 
-### Backend only (local)
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-# Use .env at project root or export DATABASE_URL
-alembic upgrade head
-uvicorn app.main:app --reload --port 8000
-```
-
-### Frontend only (local)
-
-```bash
-cd frontend
-npm install
-# NEXT_PUBLIC_API_URL=http://localhost:8000
-npm run dev
-```
-
-Copy variables from `.env.example` into `.env` (root) for Compose, or `.env.local` in `frontend/` for local Next.js.
-
-### Environment variables (essential)
+### Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `DATABASE_URL` | Async PostgreSQL connection |
-| `REDIS_URL` | Redis connection |
-| `JWT_SECRET_KEY` / `JWT_REFRESH_SECRET_KEY` | Token signing |
-| `CORS_ORIGINS` | Allowed frontend origins |
-| `NEXT_PUBLIC_API_URL` | Frontend → API base URL |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First-run admin seed |
+| `DATABASE_URL` | Async PostgreSQL |
+| `JWT_SECRET_KEY` / `JWT_REFRESH_SECRET_KEY` | Tokens |
+| `NEXT_PUBLIC_API_URL` | Frontend → API |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Admin seed |
 
 ---
 
-## Current development status
+## Development status
 
-This repository is under **active development**. What is stable today:
+**Stable today:** decoupled FastAPI + Next.js, migrations 001–014, public booking, session model, full financial + inventory + sales stack, RBAC.
 
-- Decoupled **FastAPI + Next.js** architecture
-- **PostgreSQL** schema with Alembic migrations
-- **Public booking** and **phone-based appointment self-service**
-- **Appointment session model** with `AppointmentItem`
-- **Professional availability** as weekly rules (not fixed hours on `Professional`)
-- **RBAC** and professional ↔ user linking rules
-
-What is still evolving:
-
-- Scheduling engine (multi-service UX, exceptions, breaks, vacations)
-- Operational UX polish (availability editor, calendar enhancements)
-- Financial and inventory modules
-- **No AI agents implemented yet** — structure is ready, not the runtime
+**Planned:** operational reports, analytics, AI agent, UX polish, production deploy docs.
 
 ---
 
-## Roadmap / next steps
+## Roadmap
 
-### Current focus · in progress
+### Delivered
 
-- [✅] Scheduling engine stabilization (gaps, overlap rules, edge cases)
-- [✅] Multi-service booking in public UI (`service_ids`)
-- [✅] Professional availability management UI
-- [ ] Operational UX (dashboard, calendar, mobile-first polish)
-- [ ] Booking flow QA and error handling
+- [x] Scheduling (calendar, availability, blocks)
+- [x] Financial (periods, revenue, expenses, advances, reserve, close, wallet)
+- [x] Inventory (products, movements, minimum stock)
+- [x] Sales (stock deduction, finance integration, cancellation)
+- [x] Product categories
 
-### Next modules · planned
+### Next
 
-- [ ] Financial module (revenue, cash flow)
-- [ ] Inventory / retail products
-- [ ] Commissions per professional
-- [ ] Sales tracking
-- [ ] Operational expenses
-
-### AI layer · planned
-
-- [ ] WhatsApp operational agent (LangGraph + WAHA)
-- [ ] Automated booking via chat
-- [ ] Appointment reminders
-- [ ] Rescheduling assistance
-- [ ] Customer support automation (FAQ + handoff)
-
-### Future improvements · planned
-
-- [ ] White-label branding per tenant
-- [ ] Custom themes
-- [ ] Analytics dashboard
-- [ ] Notification system (email / push / WhatsApp)
-- [ ] Production deployment guide
-- [ ] CI/CD pipeline
+- [ ] Operational reports
+- [ ] Analytics
+- [ ] Operational AI (LangGraph + WAHA)
+- [ ] UX polish · expanded QA · CI/CD · production guide
 
 ---
 
 ## AI vision
 
-The long-term goal is an **operational WhatsApp agent** that uses the same scheduling rules as the web app:
+A **WhatsApp operational agent** using the same scheduling and domain rules: availability, multi-item sessions, phone-scoped lookup, reminders, reschedule/cancel, human handoff.
 
-- Answer availability questions using `ProfessionalAvailability` + live appointments
-- Create sessions with multiple `AppointmentItem` rows
-- Send reminders and handle reschedule/cancel flows with phone verification
-- Escalate to human staff when confidence is low
-
-No LLM or graph runtime ships in this repo yet. The API and service layer are intentionally **agent-friendly** so automation can be added without redesigning the core domain.
+No LangGraph runtime ships yet; the API is agent-friendly by design.
 
 ---
 
 ## API overview
 
-| Area | Prefix | Notes |
-|------|--------|-------|
-| Health | `/api/v1/health` | Liveness |
-| Auth | `/api/v1/auth` | Login, refresh |
-| Services | `/api/v1/services` | Catalog |
-| Professionals | `/api/v1/professionals` | CRUD, profile, availability, slots |
-| Appointments | `/api/v1/appointments` | Staff (JWT) |
-| Public appointments | `/api/v1/public/appointments` | Guest booking |
+Global prefix: `/api` · version: `/v1`
 
-Interactive docs: **http://localhost:8000/docs**
+| Area | Prefix |
+|------|--------|
+| Health | `/api/v1/health` |
+| Auth | `/api/v1/auth` |
+| Users | `/api/v1/users` |
+| Services | `/api/v1/services` |
+| Professionals | `/api/v1/professionals` |
+| Appointments | `/api/v1/appointments` |
+| Public appointments | `/api/v1/public/appointments` |
+| Financial | `/api/v1/financial` |
+| Inventory | `/api/v1/inventory` |
+| Categories | `/api/v1/inventory/categories` |
+
+Docs: **http://localhost:8000/docs**
 
 ---
 
 ## Contributing
 
-This project is primarily a portfolio / product refactor. Issues and PRs are welcome once the public repository is published.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-change`)
-3. Commit with clear messages
-4. Open a Pull Request
+1. Fork · 2. Branch · 3. Clear commits · 4. Pull Request
 
 ---
 
@@ -411,5 +453,5 @@ MIT [LICENSE](LICENSE).
 ---
 
 <p align="center">
-  <sub>Built as a professional SaaS refactor · PostgreSQL-first · AI-ready by design</sub>
+  <sub>Professional SaaS refactor · PostgreSQL-first · AI-ready by design</sub>
 </p>

@@ -61,6 +61,7 @@ import type {
 } from "@/features/professionals/types/professional.types";
 
 import { getApiErrorMessage } from "@/lib/api-client";
+import { financialKeys } from "@/features/financial/hooks/use-financial";
 
 
 
@@ -136,6 +137,8 @@ export function useCreateProfessional() {
 
       qc.invalidateQueries({ queryKey: professionalsKeys.all });
 
+      qc.invalidateQueries({ queryKey: financialKeys.participationSummary() });
+
       if (data.temporary_password) {
 
         toast.success("Profissional criado", {
@@ -175,6 +178,8 @@ export function useUpdateProfessional(id: string) {
       qc.setQueryData(professionalsKeys.detail(id), data);
 
       qc.invalidateQueries({ queryKey: professionalsKeys.all });
+
+      qc.invalidateQueries({ queryKey: financialKeys.participationSummary() });
 
       toast.success("Profissional atualizado");
 
@@ -255,6 +260,8 @@ export function useDeleteProfessional() {
     onSuccess: () => {
 
       qc.invalidateQueries({ queryKey: professionalsKeys.all });
+
+      qc.invalidateQueries({ queryKey: financialKeys.participationSummary() });
 
       toast.success("Profissional excluído");
 

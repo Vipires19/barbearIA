@@ -32,6 +32,10 @@ export const professionalAdminSchema = z.object({
 
   is_active: z.boolean().default(true),
 
+  participation_percentage: z.coerce.number().min(0, "Mínimo 0%").max(100, "Máximo 100%").default(0),
+
+  active_for_distribution: z.boolean().default(false),
+
 });
 
 

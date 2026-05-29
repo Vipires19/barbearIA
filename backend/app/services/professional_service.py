@@ -544,6 +544,8 @@ class ProfessionalService:
             specialties=professional.specialties or [],
             is_active=professional.is_active,
             is_publicly_visible=professional.is_publicly_visible,
+            participation_percentage=float(professional.participation_percentage),
+            active_for_distribution=professional.active_for_distribution,
             user_id=professional.user_id,
             login_email=login_email,
             login_is_active=login_is_active,

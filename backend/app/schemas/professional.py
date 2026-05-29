@@ -3,6 +3,7 @@ import re
 import uuid
 
 from datetime import datetime, time
+from decimal import Decimal
 
 
 
@@ -218,6 +219,10 @@ class ProfessionalAdminUpdate(BaseModel):
 
     is_active: bool | None = None
 
+    participation_percentage: Decimal | None = Field(default=None, ge=0, le=100)
+
+    active_for_distribution: bool | None = None
+
 
 
 
@@ -297,6 +302,10 @@ class ProfessionalResponse(BaseModel):
     is_active: bool
 
     is_publicly_visible: bool
+
+    participation_percentage: float = 0.0
+
+    active_for_distribution: bool = False
 
     user_id: uuid.UUID | None = None
 

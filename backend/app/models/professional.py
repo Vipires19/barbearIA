@@ -1,6 +1,8 @@
 import uuid
 
-from sqlalchemy import ARRAY, Boolean, ForeignKey, String, Text
+from decimal import Decimal
+
+from sqlalchemy import ARRAY, Boolean, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -28,6 +30,17 @@ class Professional(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
+    )
+    participation_percentage: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2),
+        nullable=False,
+        server_default="0",
+    )
+    active_for_distribution: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
         index=True,
     )
 

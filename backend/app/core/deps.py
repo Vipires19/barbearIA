@@ -16,7 +16,11 @@ from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.services.appointment_service import AppointmentService
 from app.services.auth_service import AuthService
+from app.services.financial_service import FinancialService
+from app.services.inventory_service import InventoryService
+from app.services.product_category_service import ProductCategoryService
 from app.services.professional_service import ProfessionalService
+from app.services.sales_service import SalesService
 from app.services.service_service import ServiceService
 from app.services.user_service import UserService
 from app.utils.security import decode_access_token
@@ -81,6 +85,30 @@ async def get_appointment_service(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> AppointmentService:
     return AppointmentService(session)
+
+
+async def get_financial_service(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> FinancialService:
+    return FinancialService(session)
+
+
+async def get_inventory_service(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> InventoryService:
+    return InventoryService(session)
+
+
+async def get_sales_service(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SalesService:
+    return SalesService(session)
+
+
+async def get_product_category_service(
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> ProductCategoryService:
+    return ProductCategoryService(session)
 
 
 async def _resolve_user(
