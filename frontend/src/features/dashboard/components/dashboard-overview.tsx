@@ -115,7 +115,7 @@ export function DashboardOverview() {
               <CardDescription>Próximos horários de hoje</CardDescription>
             </div>
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/calendar">Ver agenda</Link>
+              <Link href="/dashboard/calendar">Configurar horários</Link>
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">

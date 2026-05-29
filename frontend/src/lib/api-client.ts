@@ -75,8 +75,14 @@ apiClient.interceptors.response.use(
 
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const detail = error.response?.data as { detail?: string } | undefined;
-    if (detail?.detail) return detail.detail;
+    const data = error.response?.data as
+      | { detail?: string | Array<{ msg?: string; loc?: unknown[] }> }
+      | undefined;
+    const detail = data?.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail) && detail.length > 0) {
+      return detail.map((item) => item.msg ?? "Erro de validação").join("; ");
+    }
     return error.message;
   }
   if (error instanceof Error) return error.message;

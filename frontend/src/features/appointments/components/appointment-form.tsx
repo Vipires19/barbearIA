@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Sparkles, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
@@ -44,7 +44,7 @@ export function AppointmentForm() {
       client_name: "",
       client_phone: "",
       client_email: "",
-      service_id: initialService,
+      service_ids: initialService ? [initialService] : [],
       professional_id: initialProfessional,
       appointment_date: today,
       start_time: "",
@@ -52,7 +52,7 @@ export function AppointmentForm() {
     },
   });
 
-  const serviceId = form.watch("service_id");
+  const serviceIds = form.watch("service_ids");
   const professionalId = form.watch("professional_id");
   const appointmentDate = form.watch("appointment_date");
   const startTime = form.watch("start_time");
@@ -61,27 +61,43 @@ export function AppointmentForm() {
   const professionalsQuery = useProfessionalsList({
     page: 1,
     page_size: 50,
-    service_id: serviceId || undefined,
   });
-  const slotsQuery = useAvailableSlots(professionalId, serviceId, appointmentDate);
+  const slotsQuery = useAvailableSlots(professionalId, serviceIds, appointmentDate);
 
-  const selectedService = useMemo(
-    () => servicesQuery.data?.items.find((service) => service.id === serviceId),
-    [servicesQuery.data?.items, serviceId],
+  const selectedServices = useMemo(
+    () => (servicesQuery.data?.items ?? []).filter((service) => serviceIds.includes(service.id)),
+    [servicesQuery.data?.items, serviceIds],
   );
+  const selectedServiceIdsSet = useMemo(() => new Set(serviceIds), [serviceIds]);
+  const totalDuration = useMemo(
+    () => selectedServices.reduce((acc, service) => acc + service.duration_minutes, 0),
+    [selectedServices],
+  );
+  const totalPrice = useMemo(
+    () => selectedServices.reduce((acc, service) => acc + Number(service.price), 0),
+    [selectedServices],
+  );
+  const compatibleProfessionals = useMemo(() => {
+    if (!serviceIds.length) return [];
+    return (professionalsQuery.data?.items ?? []).filter((professional) =>
+      serviceIds.every((id) => professional.services.some((service) => service.id === id)),
+    );
+  }, [professionalsQuery.data?.items, serviceIds]);
   const selectedProfessional = useMemo(
-    () =>
-      professionalsQuery.data?.items.find((professional) => professional.id === professionalId),
-    [professionalsQuery.data?.items, professionalId],
+    () => compatibleProfessionals.find((professional) => professional.id === professionalId),
+    [compatibleProfessionals, professionalId],
   );
 
   useEffect(() => {
-    if (initialService) form.setValue("service_id", initialService);
+    if (initialService) form.setValue("service_ids", [initialService]);
     if (initialProfessional) form.setValue("professional_id", initialProfessional);
   }, [form, initialProfessional, initialService]);
 
-  function chooseService(id: string) {
-    form.setValue("service_id", id, { shouldValidate: true });
+  function toggleService(id: string) {
+    const current = form.getValues("service_ids");
+    const exists = current.includes(id);
+    const next = exists ? current.filter((item) => item !== id) : [...current, id];
+    form.setValue("service_ids", next, { shouldValidate: true });
     form.setValue("professional_id", "");
     form.setValue("start_time", "");
   }
@@ -102,7 +118,7 @@ export function AppointmentForm() {
         client_name: values.client_name,
         client_phone: values.client_phone,
         client_email: values.client_email || null,
-        service_ids: [values.service_id],
+        service_ids: values.service_ids,
         professional_id: values.professional_id,
         appointment_date: values.appointment_date,
         start_time: values.start_time,
@@ -120,9 +136,9 @@ export function AppointmentForm() {
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       <BookingStep
         number="1"
-        title="Escolha o serviço"
-        complete={Boolean(selectedService)}
-        description="Comece pelo que você precisa hoje."
+        title="Escolha os serviços"
+        complete={selectedServices.length > 0}
+        description="Você pode combinar múltiplos serviços no mesmo horário."
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {servicesQuery.isLoading
@@ -130,12 +146,12 @@ export function AppointmentForm() {
                 <div key={index} className="h-32 animate-pulse rounded-xl bg-muted" />
               ))
             : servicesQuery.data?.items.map((service) => {
-                const selected = service.id === serviceId;
+                const selected = selectedServiceIdsSet.has(service.id);
                 return (
                   <button
                     key={service.id}
                     type="button"
-                    onClick={() => chooseService(service.id)}
+                    onClick={() => toggleService(service.id)}
                     className={cn(
                       "rounded-xl border p-4 text-left transition hover:border-primary/50",
                       selected ? "border-primary bg-primary/10 ring-2 ring-primary/20" : "bg-card",
@@ -155,21 +171,36 @@ export function AppointmentForm() {
                 );
               })}
         </div>
+        {selectedServices.length ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {selectedServices.map((service) => (
+              <button
+                key={service.id}
+                type="button"
+                onClick={() => toggleService(service.id)}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium"
+              >
+                {service.name}
+                <X className="h-3 w-3" aria-hidden />
+              </button>
+            ))}
+          </div>
+        ) : null}
       </BookingStep>
 
-      {serviceId ? (
+      {serviceIds.length ? (
         <BookingStep
           number="2"
           title="Escolha o profissional"
           complete={Boolean(selectedProfessional)}
-          description="Mostramos apenas profissionais habilitados para o serviço."
+          description="Mostramos apenas profissionais que atendem todos os serviços selecionados."
         >
           <div className="grid gap-3 sm:grid-cols-2">
             {professionalsQuery.isLoading
               ? Array.from({ length: 4 }).map((_, index) => (
                   <div key={index} className="h-40 animate-pulse rounded-xl bg-muted" />
                 ))
-              : professionalsQuery.data?.items.map((professional) => (
+              : compatibleProfessionals.map((professional) => (
                   <ProfessionalCard
                     key={professional.id}
                     professional={professional}
@@ -177,11 +208,16 @@ export function AppointmentForm() {
                     onSelect={() => chooseProfessional(professional.id)}
                   />
                 ))}
+            {!professionalsQuery.isLoading && compatibleProfessionals.length === 0 ? (
+              <p className="sm:col-span-2 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                Nenhum profissional atende a combinacao selecionada.
+              </p>
+            ) : null}
           </div>
         </BookingStep>
       ) : null}
 
-      {serviceId && professionalId ? (
+      {serviceIds.length && professionalId ? (
         <BookingStep
           number="3"
           title="Data e horário"
@@ -198,7 +234,7 @@ export function AppointmentForm() {
         </BookingStep>
       ) : null}
 
-      {serviceId && professionalId && startTime ? (
+      {serviceIds.length && professionalId && startTime ? (
         <BookingStep number="4" title="Seus dados" complete={false}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -233,8 +269,12 @@ export function AppointmentForm() {
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="space-y-2 p-4 text-sm">
               <p className="font-semibold">Resumo</p>
-              <p>{selectedService?.name}</p>
+              <p>{selectedServices.map((service) => service.name).join(" + ")}</p>
               <p>{selectedProfessional?.name}</p>
+              <p>
+                {selectedServices.length} serviço(s) • {formatDuration(totalDuration)} •{" "}
+                {formatPrice(totalPrice)}
+              </p>
               <p>
                 {appointmentDate} às {startTime}
               </p>
@@ -246,6 +286,29 @@ export function AppointmentForm() {
             <Sparkles className="h-4 w-4" />
           </Button>
         </BookingStep>
+      ) : null}
+
+      {selectedServices.length ? (
+        <Card className="sticky bottom-4 z-20 border-primary/30 bg-background/95 shadow-lg backdrop-blur">
+          <CardContent className="flex items-center justify-between gap-3 p-4">
+            <div className="text-sm">
+              <p className="font-semibold">{selectedServices.length} serviço(s) selecionado(s)</p>
+              <p className="text-muted-foreground">
+                {formatDuration(totalDuration)} • {formatPrice(totalPrice)}
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => {
+                const target = document.getElementById("booking-step-2");
+                target?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              disabled={!serviceIds.length}
+            >
+              Continuar
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
     </form>
   );
@@ -265,7 +328,10 @@ function BookingStep({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border/60 bg-card/80 p-4 shadow-sm sm:p-6">
+    <section
+      id={`booking-step-${number}`}
+      className="rounded-2xl border border-border/60 bg-card/80 p-4 shadow-sm sm:p-6"
+    >
       <div className="mb-4 flex items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
           {complete ? <CheckCircle2 className="h-5 w-5" /> : number}

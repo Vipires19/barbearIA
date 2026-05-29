@@ -2,7 +2,7 @@ import uuid
 
 
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,9 +10,13 @@ from sqlalchemy.orm import selectinload
 
 
 
+from datetime import date
+
 from app.models.professional import Professional
 
 from app.models.professional_availability import ProfessionalAvailability
+
+from app.models.professional_schedule_block import ProfessionalScheduleBlock
 
 from app.models.service import Service
 
@@ -218,9 +222,15 @@ class ProfessionalRepository:
 
         await self._session.flush()
 
-        await self._session.refresh(professional, attribute_names=["services", "user", "availabilities"])
+        stmt = (
+            self._base_stmt()
+            .where(Professional.id == professional.id)
+            .execution_options(populate_existing=True)
+        )
+        result = await self._session.execute(stmt)
+        reloaded = result.scalar_one_or_none()
 
-        return professional
+        return reloaded if reloaded is not None else professional
 
 
 
@@ -349,6 +359,156 @@ class ProfessionalRepository:
 
 
     async def delete_availability(self, row: ProfessionalAvailability) -> None:
+
+        await self._session.delete(row)
+
+        await self._session.flush()
+
+
+
+    async def replace_availabilities(
+
+        self,
+
+        professional_id: uuid.UUID,
+
+        *,
+
+        entries: list[dict[str, object]],
+
+    ) -> list[ProfessionalAvailability]:
+        await self._session.execute(
+            delete(ProfessionalAvailability).where(
+                ProfessionalAvailability.professional_id == professional_id
+            )
+        )
+        await self._session.flush()
+
+        created: list[ProfessionalAvailability] = []
+
+        for entry in entries:
+
+            row = ProfessionalAvailability(
+
+                professional_id=professional_id,
+
+                weekday=int(entry["weekday"]),
+
+                start_time=parse_time_str(str(entry["start_time"])),
+
+                end_time=parse_time_str(str(entry["end_time"])),
+
+                active=bool(entry["active"]),
+
+            )
+
+            self._session.add(row)
+
+            created.append(row)
+
+        await self._session.flush()
+
+        return sorted(created, key=lambda r: (r.weekday, r.start_time))
+
+
+
+    async def list_schedule_blocks_for_date(
+
+        self,
+
+        professional_id: uuid.UUID,
+
+        block_date: date,
+
+    ) -> list[ProfessionalScheduleBlock]:
+
+        stmt = (
+
+            select(ProfessionalScheduleBlock)
+
+            .where(
+
+                ProfessionalScheduleBlock.professional_id == professional_id,
+
+                ProfessionalScheduleBlock.block_date == block_date,
+
+            )
+
+            .order_by(ProfessionalScheduleBlock.start_time)
+
+        )
+
+        result = await self._session.execute(stmt)
+
+        return list(result.scalars().all())
+
+
+
+    async def get_schedule_block_by_id(
+
+        self,
+
+        block_id: uuid.UUID,
+
+        professional_id: uuid.UUID,
+
+    ) -> ProfessionalScheduleBlock | None:
+
+        stmt = select(ProfessionalScheduleBlock).where(
+
+            ProfessionalScheduleBlock.id == block_id,
+
+            ProfessionalScheduleBlock.professional_id == professional_id,
+
+        )
+
+        result = await self._session.execute(stmt)
+
+        return result.scalar_one_or_none()
+
+
+
+    async def create_schedule_block(
+
+        self,
+
+        *,
+
+        professional_id: uuid.UUID,
+
+        block_date: date,
+
+        start_time: str,
+
+        end_time: str,
+
+        reason: str | None,
+
+    ) -> ProfessionalScheduleBlock:
+
+        row = ProfessionalScheduleBlock(
+
+            professional_id=professional_id,
+
+            block_date=block_date,
+
+            start_time=parse_time_str(start_time),
+
+            end_time=parse_time_str(end_time),
+
+            reason=reason.strip() if reason else None,
+
+        )
+
+        self._session.add(row)
+
+        await self._session.flush()
+
+        return row
+
+
+
+    async def delete_schedule_block(self, row: ProfessionalScheduleBlock) -> None:
 
         await self._session.delete(row)
 

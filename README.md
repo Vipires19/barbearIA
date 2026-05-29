@@ -332,9 +332,9 @@ What is still evolving:
 
 ### Current focus · in progress
 
-- [ ] Scheduling engine stabilization (gaps, overlap rules, edge cases)
-- [ ] Multi-service booking in public UI (`service_ids`)
-- [ ] Professional availability management UI
+- [✅] Scheduling engine stabilization (gaps, overlap rules, edge cases)
+- [✅] Multi-service booking in public UI (`service_ids`)
+- [✅] Professional availability management UI
 - [ ] Operational UX (dashboard, calendar, mobile-first polish)
 - [ ] Booking flow QA and error handling
 

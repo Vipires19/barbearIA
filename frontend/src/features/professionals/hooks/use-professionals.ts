@@ -78,13 +78,15 @@ export const professionalsKeys = {
 
 
 
-export function useProfessionalsList(params: ProfessionalListParams) {
+export function useProfessionalsList(params: ProfessionalListParams, enabled = true) {
 
   return useQuery({
 
     queryKey: professionalsKeys.list(params),
 
     queryFn: () => fetchProfessionals(params),
+
+    enabled,
 
   });
 

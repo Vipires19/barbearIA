@@ -1,8 +1,9 @@
 import uuid
 
-from datetime import date
+from datetime import date as date_type
 
 from typing import Annotated
+import logging
 
 
 
@@ -52,7 +53,13 @@ from app.schemas.professional import (
 
     ProfessionalResponse,
 
+    WeekdayAvailabilityInput,
+
+    WeekdayAvailabilityResponse,
+
 )
+
+from app.schemas.schedule_block import ScheduleBlockCreate, ScheduleBlockResponse
 
 from app.services.appointment_service import AppointmentService
 
@@ -61,6 +68,7 @@ from app.services.professional_service import ProfessionalService
 
 
 router = APIRouter(prefix="/professionals", tags=["professionals"])
+logger = logging.getLogger(__name__)
 
 
 
@@ -153,6 +161,162 @@ async def upload_my_avatar(
 ) -> ProfessionalResponse:
 
     return await svc.upload_my_avatar(file, current_user)
+
+
+
+
+
+@router.get("/me/availabilities", response_model=list[WeekdayAvailabilityResponse])
+
+async def get_my_availabilities(
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+) -> list[WeekdayAvailabilityResponse]:
+
+    return await svc.get_my_grouped_availabilities(current_user)
+
+
+
+
+
+@router.put("/me/availabilities", response_model=list[WeekdayAvailabilityResponse])
+
+async def replace_my_availabilities(
+
+    data: list[WeekdayAvailabilityInput],
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+) -> list[WeekdayAvailabilityResponse]:
+
+    return await svc.replace_my_grouped_availabilities(data, current_user)
+
+
+
+
+
+@router.get("/me/schedule-blocks", response_model=list[ScheduleBlockResponse])
+
+async def list_my_schedule_blocks(
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+    block_date: date_type = Query(..., alias="date"),
+
+) -> list[ScheduleBlockResponse]:
+
+    return await svc.list_my_schedule_blocks(block_date, current_user)
+
+
+
+
+
+@router.post("/me/schedule-blocks", response_model=ScheduleBlockResponse, status_code=status.HTTP_201_CREATED)
+
+async def create_my_schedule_block(
+
+    data: ScheduleBlockCreate,
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+) -> ScheduleBlockResponse:
+
+    return await svc.create_my_schedule_block(data, current_user)
+
+
+
+
+
+@router.delete("/me/schedule-blocks/{block_id}", status_code=status.HTTP_204_NO_CONTENT)
+
+async def delete_my_schedule_block(
+
+    block_id: uuid.UUID,
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+) -> None:
+
+    await svc.delete_my_schedule_block(block_id, current_user)
+
+
+
+
+
+@router.get("/{professional_id}/schedule-blocks", response_model=list[ScheduleBlockResponse])
+
+async def list_schedule_blocks(
+
+    professional_id: uuid.UUID,
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+    block_date: date_type = Query(..., alias="date"),
+
+) -> list[ScheduleBlockResponse]:
+
+    return await svc.list_schedule_blocks(professional_id, block_date, current_user)
+
+
+
+
+
+@router.post(
+
+    "/{professional_id}/schedule-blocks",
+
+    response_model=ScheduleBlockResponse,
+
+    status_code=status.HTTP_201_CREATED,
+
+)
+
+async def create_schedule_block(
+
+    professional_id: uuid.UUID,
+
+    data: ScheduleBlockCreate,
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+) -> ScheduleBlockResponse:
+
+    return await svc.create_schedule_block(professional_id, data, current_user)
+
+
+
+
+
+@router.delete("/{professional_id}/schedule-blocks/{block_id}", status_code=status.HTTP_204_NO_CONTENT)
+
+async def delete_schedule_block(
+
+    professional_id: uuid.UUID,
+
+    block_id: uuid.UUID,
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+) -> None:
+
+    await svc.delete_schedule_block(professional_id, block_id, current_user)
 
 
 
@@ -265,12 +429,20 @@ async def list_available_slots(
     service_id: uuid.UUID | None = Query(None),
 
     service_ids: list[uuid.UUID] | None = Query(None),
+    service_ids_legacy: list[uuid.UUID] | None = Query(None, alias="service_ids[]"),
 
-    appointment_date: date = Query(..., alias="date"),
+    appointment_date: date_type = Query(..., alias="date"),
 
 ) -> AvailableSlotsResponse:
 
-    ids = service_ids or ([] if service_id is None else [service_id])
+    ids = service_ids or service_ids_legacy or ([] if service_id is None else [service_id])
+    logger.info(
+        "available-slots params service_id=%s service_ids=%s service_ids_legacy=%s resolved=%s",
+        service_id,
+        service_ids,
+        service_ids_legacy,
+        ids,
+    )
 
     if not ids:
 
@@ -280,7 +452,7 @@ async def list_available_slots(
 
         raise AppError("Informe service_id ou service_ids", status_code=400)
 
-    return await svc.list_available_slots(
+    response = await svc.list_available_slots(
 
         professional_id=professional_id,
 
@@ -289,12 +461,19 @@ async def list_available_slots(
         appointment_date=appointment_date,
 
     )
+    logger.info(
+        "available-slots computed professional_id=%s duration=%s slots=%s",
+        professional_id,
+        response.duration_minutes,
+        len(response.slots),
+    )
+    return response
 
 
 
 
 
-@router.get("/{professional_id}/availabilities", response_model=list[ProfessionalAvailabilityResponse])
+@router.get("/{professional_id}/availabilities", response_model=list[WeekdayAvailabilityResponse])
 
 async def list_availabilities(
 
@@ -304,9 +483,29 @@ async def list_availabilities(
 
     current_user: Annotated[User, Depends(get_current_user)],
 
-) -> list[ProfessionalAvailabilityResponse]:
+) -> list[WeekdayAvailabilityResponse]:
 
-    return await svc.list_availabilities(professional_id, current_user)
+    return await svc.get_grouped_availabilities(professional_id, current_user)
+
+
+
+
+
+@router.put("/{professional_id}/availabilities", response_model=list[WeekdayAvailabilityResponse])
+
+async def replace_availabilities(
+
+    professional_id: uuid.UUID,
+
+    data: list[WeekdayAvailabilityInput],
+
+    svc: Annotated[ProfessionalService, Depends(get_professional_service)],
+
+    current_user: Annotated[User, Depends(get_current_user)],
+
+) -> list[WeekdayAvailabilityResponse]:
+
+    return await svc.replace_grouped_availabilities(professional_id, data, current_user)
 
 
 

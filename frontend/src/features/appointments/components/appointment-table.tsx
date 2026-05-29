@@ -11,9 +11,10 @@ import { formatAppointmentDate, formatTimeRange } from "@/features/appointments/
 type AppointmentTableProps = {
   data: Appointment[];
   renderActions?: (appointment: Appointment) => ReactNode;
+  onRowClick?: (appointment: Appointment) => void;
 };
 
-export function AppointmentTable({ data, renderActions }: AppointmentTableProps) {
+export function AppointmentTable({ data, renderActions, onRowClick }: AppointmentTableProps) {
   const columns: DataTableColumn<Appointment>[] = [
     {
       key: "client",
@@ -38,13 +39,22 @@ export function AppointmentTable({ data, renderActions }: AppointmentTableProps)
       cell: (a) => formatTimeRange(a.start_time, a.end_time),
     },
     { key: "status", header: "Status", cell: (a) => <StatusBadge status={a.status} /> },
-    {
+  ];
+  if (renderActions) {
+    columns.push({
       key: "actions",
       header: "",
-      cell: (a) => renderActions?.(a),
+      cell: (a) => renderActions(a),
       className: "w-12 text-right",
-    },
-  ];
+    });
+  }
 
-  return <DataTable data={data} columns={columns} keyExtractor={(a) => a.id} />;
+  return (
+    <DataTable
+      data={data}
+      columns={columns}
+      keyExtractor={(a) => a.id}
+      onRowClick={onRowClick}
+    />
+  );
 }

@@ -4,7 +4,7 @@ import { statusLabels } from "@/features/appointments/utils/format";
 
 const variants: Record<AppointmentStatus, "default" | "secondary" | "outline" | "destructive"> = {
   scheduled: "secondary",
-  confirmed: "default",
+  confirmed: "secondary",
   completed: "outline",
   cancelled: "destructive",
   no_show: "destructive",

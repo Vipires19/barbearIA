@@ -14,7 +14,7 @@ export function CalendarPicker({ value, onChange, days = 14 }: CalendarPickerPro
   const dates = getNextDates(days);
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-2">
+    <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-2 [-webkit-overflow-scrolling:touch]">
       {dates.map((date) => {
         const iso = toISODate(date);
         const selected = value === iso;

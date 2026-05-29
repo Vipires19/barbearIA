@@ -2,7 +2,7 @@ import type { AppointmentStatus } from "@/features/appointments/types/appointmen
 
 export const statusLabels: Record<AppointmentStatus, string> = {
   scheduled: "Agendado",
-  confirmed: "Confirmado",
+  confirmed: "Agendado",
   completed: "Concluído",
   cancelled: "Cancelado",
   no_show: "Falta",

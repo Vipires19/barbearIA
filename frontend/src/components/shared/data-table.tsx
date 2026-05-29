@@ -17,9 +17,10 @@ type DataTableProps<T> = {
   data: T[];
   keyExtractor: (row: T) => string;
   emptyMessage?: string;
+  onRowClick?: (row: T) => void;
 };
 
-export function DataTable<T>({ columns, data, keyExtractor, emptyMessage }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, keyExtractor, emptyMessage, onRowClick }: DataTableProps<T>) {
   if (data.length === 0 && emptyMessage) {
     return <p className="py-8 text-center text-sm text-muted-foreground">{emptyMessage}</p>;
   }
@@ -45,7 +46,14 @@ export function DataTable<T>({ columns, data, keyExtractor, emptyMessage }: Data
         </thead>
         <tbody>
           {data.map((row) => (
-            <tr key={keyExtractor(row)} className="border-b last:border-0 hover:bg-muted/20">
+            <tr
+              key={keyExtractor(row)}
+              className={cn(
+                "border-b last:border-0 hover:bg-muted/20",
+                onRowClick ? "cursor-pointer" : undefined,
+              )}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+            >
               {columns.map((col) => (
                 <td
                   key={col.key}

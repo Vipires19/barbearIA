@@ -17,7 +17,6 @@ import { useAvailableSlots } from "@/features/appointments/hooks/use-appointment
 import { toISODate } from "@/features/appointments/utils/format";
 import { useReschedulePublicAppointment } from "@/features/public-appointments/hooks/use-public-appointments";
 import type { PublicAppointment } from "@/features/public-appointments/types/public-appointment.types";
-import { getPublicPrimaryServiceId } from "@/features/public-appointments/types/public-appointment.types";
 
 type RescheduleAppointmentDialogProps = {
   appointment: PublicAppointment | null;
@@ -36,7 +35,7 @@ export function RescheduleAppointmentDialog({
   const [selectedStart, setSelectedStart] = useState<string | null>(null);
   const slotsQuery = useAvailableSlots(
     open && appointment ? appointment.professional_id : undefined,
-    open && appointment ? getPublicPrimaryServiceId(appointment) : undefined,
+    open && appointment ? appointment.service_ids : undefined,
     open && appointment ? date : undefined,
   );
   const mutation = useReschedulePublicAppointment();

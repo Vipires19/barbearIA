@@ -9,6 +9,7 @@ from app.models.appointment import Appointment, AppointmentStatus
 from app.models.appointment_item import AppointmentItem
 from app.models.professional import Professional
 from app.models.professional_availability import ProfessionalAvailability
+from app.models.professional_schedule_block import ProfessionalScheduleBlock
 from app.models.service import Service
 
 BLOCKING_STATUSES = (AppointmentStatus.scheduled, AppointmentStatus.confirmed)
@@ -188,6 +189,36 @@ class AppointmentRepository:
         stmt = stmt.order_by(Appointment.start_time.asc())
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def list_schedule_blocks_for_day(
+        self,
+        *,
+        professional_id: uuid.UUID,
+        block_date: date,
+    ) -> list[ProfessionalScheduleBlock]:
+        stmt = select(ProfessionalScheduleBlock).where(
+            ProfessionalScheduleBlock.professional_id == professional_id,
+            ProfessionalScheduleBlock.block_date == block_date,
+        )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def has_schedule_block_conflict(
+        self,
+        *,
+        professional_id: uuid.UUID,
+        block_date: date,
+        start_time: time,
+        end_time: time,
+    ) -> bool:
+        stmt = select(func.count()).select_from(ProfessionalScheduleBlock).where(
+            ProfessionalScheduleBlock.professional_id == professional_id,
+            ProfessionalScheduleBlock.block_date == block_date,
+            ProfessionalScheduleBlock.start_time < end_time,
+            ProfessionalScheduleBlock.end_time > start_time,
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one() > 0
 
     async def list_active_availabilities_for_weekday(
         self,

@@ -141,6 +141,13 @@ class AppointmentService:
         payload = data.model_dump(exclude_unset=True)
         if "client_email" in payload and payload["client_email"] is not None:
             payload["client_email"] = str(payload["client_email"])
+        if "status" in payload:
+            next_status = payload["status"]
+            if next_status is not None:
+                current_status = self._coerce_appointment_status(appointment.status)
+                next_status = self._coerce_appointment_status(next_status)
+                self._validate_status_transition(current_status, next_status)
+                payload["status"] = next_status
         updated = await self._repo.update(appointment, **payload)
         return self._to_response(updated)
 
@@ -153,6 +160,8 @@ class AppointmentService:
         self._require_manage(current_user)
         appointment = await self._get_or_404(appointment_id)
         await self._assert_ownership_if_barber(current_user, appointment)
+        if appointment.status in (AppointmentStatus.completed, AppointmentStatus.cancelled, AppointmentStatus.no_show):
+            raise AppError("Atendimento finalizado não pode ser cancelado", status_code=400)
         updated = await self._repo.update(
             appointment,
             status=AppointmentStatus.cancelled,
@@ -315,6 +324,10 @@ class AppointmentService:
             professional_id=professional.id,
             appointment_date=appointment_date,
         )
+        blocks = await self._repo.list_schedule_blocks_for_day(
+            professional_id=professional.id,
+            block_date=appointment_date,
+        )
 
         for window in windows:
             slots.extend(
@@ -323,6 +336,7 @@ class AppointmentService:
                     window=window,
                     duration_minutes=total_duration,
                     appointments=appointments,
+                    blocks=blocks,
                 )
             )
 
@@ -349,15 +363,19 @@ class AppointmentService:
         window: ProfessionalAvailability,
         duration_minutes: int,
         appointments: list[Appointment],
+        blocks: list | None = None,
     ) -> list[AvailableSlot]:
         slots: list[AvailableSlot] = []
+        block_rows = blocks or []
         current = window.start_time
         while True:
             end_time = self._add_minutes(appointment_date, current, duration_minutes)
             if end_time <= current or end_time > window.end_time:
                 break
-            if not self._is_past_slot(appointment_date, current) and not self._has_local_conflict(
-                current, end_time, appointments
+            if (
+                not self._is_past_slot(appointment_date, current)
+                and not self._has_local_conflict(current, end_time, appointments)
+                and not self._has_local_conflict(current, end_time, block_rows)
             ):
                 slots.append(
                     AvailableSlot(
@@ -423,6 +441,13 @@ class AppointmentService:
             exclude_id=exclude_id,
         ):
             raise ConflictError("Horário indisponível para este profissional")
+        if await self._repo.has_schedule_block_conflict(
+            professional_id=professional.id,
+            block_date=appointment_date,
+            start_time=start_time,
+            end_time=end_time,
+        ):
+            raise ConflictError("Horário bloqueado pelo profissional")
         if any(s.duration_minutes <= 0 for s in services):
             raise AppError("Serviço sem duração válida", status_code=400)
 
@@ -448,6 +473,29 @@ class AppointmentService:
     @staticmethod
     def _fits_availability(start_time: time, end_time: time, windows: list[ProfessionalAvailability]) -> bool:
         return any(w.start_time <= start_time and w.end_time >= end_time for w in windows)
+
+    @staticmethod
+    def _coerce_appointment_status(value: AppointmentStatus | str) -> AppointmentStatus:
+        if isinstance(value, AppointmentStatus):
+            return value
+        return AppointmentStatus(str(value))
+
+    @staticmethod
+    def _validate_status_transition(current: AppointmentStatus, nxt: AppointmentStatus) -> None:
+        if current == nxt:
+            return
+
+        if current in (AppointmentStatus.completed, AppointmentStatus.cancelled, AppointmentStatus.no_show):
+            raise AppError("Status finalizado não pode ser alterado", status_code=400)
+
+        if current in (AppointmentStatus.scheduled, AppointmentStatus.confirmed) and nxt in (
+            AppointmentStatus.completed,
+            AppointmentStatus.cancelled,
+            AppointmentStatus.no_show,
+        ):
+            return
+
+        raise AppError("Transição de status inválida", status_code=400)
 
     @staticmethod
     def _is_upcoming_client(appointment: Appointment) -> bool:

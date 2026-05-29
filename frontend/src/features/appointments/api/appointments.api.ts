@@ -55,12 +55,18 @@ export async function rescheduleAppointment(
 
 export async function fetchAvailableSlots(
   professionalId: string,
-  serviceId: string,
+  serviceIds: string[],
   date: string,
 ): Promise<AvailableSlotsResponse> {
+  const params = new URLSearchParams();
+  params.set("date", date);
+  if (serviceIds.length === 1) {
+    params.set("service_id", serviceIds[0]);
+  } else {
+    serviceIds.forEach((id) => params.append("service_ids", id));
+  }
   const { data } = await apiClient.get<AvailableSlotsResponse>(
-    `/api/v1/professionals/${professionalId}/available-slots`,
-    { params: { service_id: serviceId, date } },
+    `/api/v1/professionals/${professionalId}/available-slots?${params.toString()}`,
   );
   return data;
 }

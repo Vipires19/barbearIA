@@ -13,11 +13,12 @@ import {
 
 type AppointmentCardProps = {
   appointment: Appointment;
+  onClick?: () => void;
 };
 
-export function AppointmentCard({ appointment }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onClick }: AppointmentCardProps) {
   return (
-    <Card className="border-border/60 bg-card/90">
+    <Card className="cursor-pointer border-border/60 bg-card/90" onClick={onClick}>
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

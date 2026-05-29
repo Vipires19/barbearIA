@@ -122,6 +122,78 @@ class ProfessionalAvailabilityResponse(BaseModel):
 
 
 
+class AvailabilityTimeBlock(BaseModel):
+
+    start_time: str = Field(pattern=r"^([01]\d|2[0-3]):([0-5]\d)$")
+
+    end_time: str = Field(pattern=r"^([01]\d|2[0-3]):([0-5]\d)$")
+
+
+
+    @model_validator(mode="after")
+
+    def validate_range(self) -> "AvailabilityTimeBlock":
+
+        if parse_time_str(self.start_time) >= parse_time_str(self.end_time):
+
+            raise ValueError("start_time deve ser anterior a end_time")
+
+        return self
+
+
+
+
+
+class WeekdayAvailabilityInput(BaseModel):
+
+    weekday: int = Field(ge=0, le=6)
+
+    active: bool = True
+
+    blocks: list[AvailabilityTimeBlock] = Field(default_factory=list)
+
+
+
+    @model_validator(mode="after")
+
+    def validate_day(self) -> "WeekdayAvailabilityInput":
+
+        if self.active and not self.blocks:
+
+            raise ValueError("Informe ao menos um bloco de horário para dias ativos")
+
+        if not self.active:
+
+            return self
+
+        times = [(parse_time_str(b.start_time), parse_time_str(b.end_time)) for b in self.blocks]
+
+        ordered = sorted(times, key=lambda t: t[0])
+
+        for i in range(1, len(ordered)):
+
+            if ordered[i][0] < ordered[i - 1][1]:
+
+                raise ValueError("Blocos de horário não podem se sobrepor no mesmo dia")
+
+        return self
+
+
+
+
+
+class WeekdayAvailabilityResponse(BaseModel):
+
+    weekday: int = Field(ge=0, le=6)
+
+    active: bool
+
+    blocks: list[AvailabilityTimeBlock] = Field(default_factory=list)
+
+
+
+
+
 class ProfessionalCreate(BaseModel):
 
     """Onboarding admin: dados básicos + acesso + controle operacional."""

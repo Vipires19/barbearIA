@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 
+import { ProfessionalAvailabilityEditor } from "@/features/availability/components/professional-availability-editor";
 import { ProfessionalAdminForm } from "@/features/professionals/components/professional-admin-form";
 
 import { LoadingSkeleton } from "@/features/professionals/components/loading-skeleton";
@@ -119,6 +120,32 @@ export function ProfessionalEditForm({ professionalId }: ProfessionalEditFormPro
     <>
 
       <div className="mx-auto max-w-2xl space-y-6">
+
+        <Card>
+
+          <CardHeader>
+
+            <CardTitle>Disponibilidade</CardTitle>
+
+          </CardHeader>
+
+          <CardContent>
+
+            <p className="mb-4 text-sm text-muted-foreground">
+
+              Horários em que {professional.name} aceita agendamentos. Obrigatório para o booking exibir
+
+              horários.
+
+            </p>
+
+            <ProfessionalAvailabilityEditor professionalId={professionalId} />
+
+          </CardContent>
+
+        </Card>
+
+
 
         <Card>
 

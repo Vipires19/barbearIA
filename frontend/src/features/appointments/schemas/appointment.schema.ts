@@ -6,7 +6,7 @@ export const appointmentFormSchema = z.object({
   client_name: z.string().min(2, "Informe seu nome").max(200),
   client_phone: z.string().min(8, "Informe um telefone válido").max(30),
   client_email: z.string().email("E-mail inválido").optional().or(z.literal("")),
-  service_id: z.string().uuid("Selecione um serviço"),
+  service_ids: z.array(z.string().uuid()).min(1, "Selecione ao menos um serviço"),
   professional_id: z.string().uuid("Selecione um profissional"),
   appointment_date: z.string().min(1, "Selecione uma data"),
   start_time: z.string().regex(timeRegex, "Selecione um horário"),

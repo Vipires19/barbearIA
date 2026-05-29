@@ -310,9 +310,9 @@ Ainda em construção:
 
 ### Foco atual · em andamento
 
-- [ ] Estabilização do scheduling engine
-- [ ] Booking público com múltiplos serviços (`service_ids` na UI)
-- [ ] UI de gestão de `ProfessionalAvailability`
+- [✅] Estabilização do scheduling engine
+- [✅ ] Booking público com múltiplos serviços (`service_ids` na UI)
+- [✅] UI de gestão de `ProfessionalAvailability`
 - [ ] Refino do dashboard e calendário (mobile-first)
 - [ ] QA do fluxo de agendamento
 

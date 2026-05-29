@@ -16,11 +16,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const navItems = useMemo(() => getDashboardNavItems(user?.role), [user?.role]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-dvh max-h-dvh overflow-x-hidden">
       <Sidebar items={navItems} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <DashboardHeader />
-        <main className="flex-1 p-4 pt-20 lg:p-8 lg:pt-8">{children}</main>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="shrink-0">
+          <DashboardHeader />
+        </div>
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 pb-10 pt-20 lg:p-8 lg:pt-8">
+          {children}
+        </main>
       </div>
     </div>
   );

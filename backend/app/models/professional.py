@@ -45,4 +45,9 @@ class Professional(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         lazy="selectin",
         cascade="all, delete-orphan",
     )
+    schedule_blocks: Mapped[list["ProfessionalScheduleBlock"]] = relationship(  # noqa: F821
+        back_populates="professional",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
     user: Mapped["User | None"] = relationship(back_populates="professional", lazy="selectin")  # noqa: F821

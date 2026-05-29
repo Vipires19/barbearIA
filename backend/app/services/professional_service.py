@@ -1,15 +1,19 @@
 import math
 import uuid
+from datetime import date
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.exceptions import AppError, ConflictError, ForbiddenError, NotFoundError
 from app.models.professional import Professional
 from app.models.professional_availability import ProfessionalAvailability
+from app.models.professional_schedule_block import ProfessionalScheduleBlock
 from app.models.user import User, UserRole
 from app.repositories.professional_repository import ProfessionalRepository
 from app.repositories.user_repository import UserRepository
+from app.schemas.schedule_block import ScheduleBlockCreate, ScheduleBlockResponse
 from app.schemas.professional import (
+    AvailabilityTimeBlock,
     ProfessionalAccessCreate,
     ProfessionalAccessUpdate,
     ProfessionalAdminUpdate,
@@ -23,6 +27,8 @@ from app.schemas.professional import (
     ProfessionalResetPassword,
     ProfessionalResponse,
     ServiceSummary,
+    WeekdayAvailabilityInput,
+    WeekdayAvailabilityResponse,
     format_time,
 )
 from app.utils.file_storage import FileStorageService
@@ -311,6 +317,169 @@ class ProfessionalService:
         if row is None:
             raise NotFoundError("Disponibilidade não encontrada")
         await self._repo.delete_availability(row)
+
+    async def get_grouped_availabilities(
+        self,
+        professional_id: uuid.UUID,
+        current_user: User,
+    ) -> list[WeekdayAvailabilityResponse]:
+        professional = await self._get_or_404(professional_id)
+        self._assert_profile_access(current_user, professional)
+        rows = await self._repo.list_availabilities(professional_id)
+        return self._group_availabilities(rows)
+
+    async def get_my_grouped_availabilities(self, current_user: User) -> list[WeekdayAvailabilityResponse]:
+        professional = await self._repo.get_by_user_id(current_user.id)
+        if professional is None:
+            raise NotFoundError("Perfil profissional não encontrado")
+        rows = await self._repo.list_availabilities(professional.id)
+        return self._group_availabilities(rows)
+
+    async def replace_grouped_availabilities(
+        self,
+        professional_id: uuid.UUID,
+        data: list[WeekdayAvailabilityInput],
+        current_user: User,
+    ) -> list[WeekdayAvailabilityResponse]:
+        professional = await self._get_or_404(professional_id)
+        self._assert_profile_access(current_user, professional)
+        entries = self._flatten_weekday_inputs(data)
+        rows = await self._repo.replace_availabilities(professional_id, entries=entries)
+        return self._group_availabilities(rows)
+
+    async def replace_my_grouped_availabilities(
+        self,
+        data: list[WeekdayAvailabilityInput],
+        current_user: User,
+    ) -> list[WeekdayAvailabilityResponse]:
+        professional = await self._repo.get_by_user_id(current_user.id)
+        if professional is None:
+            raise NotFoundError("Perfil profissional não encontrado")
+        return await self.replace_grouped_availabilities(professional.id, data, current_user)
+
+    @staticmethod
+    def _group_availabilities(rows: list[ProfessionalAvailability]) -> list[WeekdayAvailabilityResponse]:
+        by_weekday: dict[int, list[AvailabilityTimeBlock]] = {d: [] for d in range(7)}
+        active_days: set[int] = set()
+        for row in rows:
+            if not row.active:
+                continue
+            active_days.add(row.weekday)
+            by_weekday[row.weekday].append(
+                AvailabilityTimeBlock(
+                    start_time=format_time(row.start_time),
+                    end_time=format_time(row.end_time),
+                )
+            )
+        result: list[WeekdayAvailabilityResponse] = []
+        for weekday in range(7):
+            blocks = sorted(by_weekday[weekday], key=lambda b: b.start_time)
+            result.append(
+                WeekdayAvailabilityResponse(
+                    weekday=weekday,
+                    active=weekday in active_days,
+                    blocks=blocks,
+                )
+            )
+        return result
+
+    @staticmethod
+    def _flatten_weekday_inputs(data: list[WeekdayAvailabilityInput]) -> list[dict[str, object]]:
+        if len(data) != 7:
+            raise AppError("Informe os 7 dias da semana (weekday 0 a 6)", status_code=400)
+        entries: list[dict[str, object]] = []
+        seen_weekdays: set[int] = set()
+        for day in data:
+            if day.weekday in seen_weekdays:
+                raise AppError("weekday duplicado no payload", status_code=400)
+            seen_weekdays.add(day.weekday)
+            if not day.active:
+                continue
+            for block in day.blocks:
+                entries.append(
+                    {
+                        "weekday": day.weekday,
+                        "start_time": block.start_time,
+                        "end_time": block.end_time,
+                        "active": True,
+                    }
+                )
+        if seen_weekdays != set(range(7)):
+            raise AppError("weekday deve ir de 0 (segunda) a 6 (domingo)", status_code=400)
+        return entries
+
+    async def list_schedule_blocks(
+        self,
+        professional_id: uuid.UUID,
+        block_date: date,
+        current_user: User,
+    ) -> list[ScheduleBlockResponse]:
+        professional = await self._get_or_404(professional_id)
+        self._assert_profile_access(current_user, professional)
+        rows = await self._repo.list_schedule_blocks_for_date(professional_id, block_date)
+        return [self._block_to_response(r) for r in rows]
+
+    async def list_my_schedule_blocks(self, block_date: date, current_user: User) -> list[ScheduleBlockResponse]:
+        professional = await self._repo.get_by_user_id(current_user.id)
+        if professional is None:
+            raise NotFoundError("Perfil profissional não encontrado")
+        return await self.list_schedule_blocks(professional.id, block_date, current_user)
+
+    async def create_schedule_block(
+        self,
+        professional_id: uuid.UUID,
+        data: ScheduleBlockCreate,
+        current_user: User,
+    ) -> ScheduleBlockResponse:
+        professional = await self._get_or_404(professional_id)
+        self._assert_profile_access(current_user, professional)
+        row = await self._repo.create_schedule_block(
+            professional_id=professional_id,
+            block_date=data.block_date,
+            start_time=data.start_time,
+            end_time=data.end_time,
+            reason=data.reason,
+        )
+        return self._block_to_response(row)
+
+    async def create_my_schedule_block(
+        self, data: ScheduleBlockCreate, current_user: User
+    ) -> ScheduleBlockResponse:
+        professional = await self._repo.get_by_user_id(current_user.id)
+        if professional is None:
+            raise NotFoundError("Perfil profissional não encontrado")
+        return await self.create_schedule_block(professional.id, data, current_user)
+
+    async def delete_schedule_block(
+        self,
+        professional_id: uuid.UUID,
+        block_id: uuid.UUID,
+        current_user: User,
+    ) -> None:
+        professional = await self._get_or_404(professional_id)
+        self._assert_profile_access(current_user, professional)
+        row = await self._repo.get_schedule_block_by_id(block_id, professional_id)
+        if row is None:
+            raise NotFoundError("Bloqueio não encontrado")
+        await self._repo.delete_schedule_block(row)
+
+    async def delete_my_schedule_block(self, block_id: uuid.UUID, current_user: User) -> None:
+        professional = await self._repo.get_by_user_id(current_user.id)
+        if professional is None:
+            raise NotFoundError("Perfil profissional não encontrado")
+        await self.delete_schedule_block(professional.id, block_id, current_user)
+
+    @staticmethod
+    def _block_to_response(row: ProfessionalScheduleBlock) -> ScheduleBlockResponse:
+        return ScheduleBlockResponse(
+            id=row.id,
+            professional_id=row.professional_id,
+            block_date=row.block_date,
+            start_time=format_time(row.start_time),
+            end_time=format_time(row.end_time),
+            reason=row.reason,
+        )
+
     async def _link_barber_account(
         self,
         professional: Professional,

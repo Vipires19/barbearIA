@@ -26,8 +26,8 @@ export const appointmentsKeys = {
   all: ["appointments"] as const,
   list: (params: AppointmentListParams) => [...appointmentsKeys.all, "list", params] as const,
   detail: (id: string) => [...appointmentsKeys.all, "detail", id] as const,
-  slots: (professionalId: string, serviceId: string, date: string) =>
-    [...appointmentsKeys.all, "slots", professionalId, serviceId, date] as const,
+  slots: (professionalId: string, serviceIdsKey: string, date: string) =>
+    [...appointmentsKeys.all, "slots", professionalId, serviceIdsKey, date] as const,
 };
 
 export function useAppointmentsList(params: AppointmentListParams) {
@@ -45,11 +45,12 @@ export function useAppointment(id: string) {
   });
 }
 
-export function useAvailableSlots(professionalId?: string, serviceId?: string, date?: string) {
+export function useAvailableSlots(professionalId?: string, serviceIds?: string[], date?: string) {
+  const serviceIdsKey = (serviceIds ?? []).slice().sort().join(",");
   return useQuery({
-    queryKey: appointmentsKeys.slots(professionalId ?? "", serviceId ?? "", date ?? ""),
-    queryFn: () => fetchAvailableSlots(professionalId!, serviceId!, date!),
-    enabled: Boolean(professionalId && serviceId && date),
+    queryKey: appointmentsKeys.slots(professionalId ?? "", serviceIdsKey, date ?? ""),
+    queryFn: () => fetchAvailableSlots(professionalId!, serviceIds!, date!),
+    enabled: Boolean(professionalId && serviceIds?.length && date),
   });
 }
 

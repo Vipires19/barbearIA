@@ -18,11 +18,12 @@ import { formatAppointmentDate, formatTimeRange } from "@/features/appointments/
 type AppointmentMobileCardProps = {
   appointment: Appointment;
   actions?: ReactNode;
+  onClick?: () => void;
 };
 
-export function AppointmentMobileCard({ appointment, actions }: AppointmentMobileCardProps) {
+export function AppointmentMobileCard({ appointment, actions, onClick }: AppointmentMobileCardProps) {
   return (
-    <Card className="md:hidden">
+    <Card className="md:hidden" onClick={onClick}>
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
